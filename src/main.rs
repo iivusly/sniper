@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         for game in page.data {
             let mut batch_req: Vec<BatchRequest> = vec![];
             for player_token in game.playerTokens {
-                batch_req.push(BatchRequest{ requestId: format!("0:{}:AvatarHeadshot:48x48:png:regular", player_token), r#type: "AvatarHeadShot".to_string(), targetId: 0, token: player_token, format: "png".to_string(), size: "48x48".to_string() });
+                batch_req.push(BatchRequest{ requestId: format!("0:{}:AvatarHeadshot:150x150:png:regular", player_token), r#type: "AvatarHeadShot".to_string(), targetId: 0, token: player_token, format: "png".to_string(), size: "150x150".to_string() });
             }
 
             let data = serde_json::to_string_pretty(&batch_req).unwrap();
@@ -122,6 +122,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
                 let parsed = url::Url::parse(data.imageUrl.as_str()).unwrap();
                 let imageid =  parsed.path().split("/").collect::<Vec<&str>>()[1];
+
+                println!("ImageID: {}", imageid);
 
                 if imageid == target_imageid {
                     found_gameid = Some(game.id.clone());
