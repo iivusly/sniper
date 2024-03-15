@@ -5,18 +5,21 @@ mod image_handler;
 mod game_handler;
 mod request;
 
-use std::{env};
 use std::time::{Duration, SystemTime};
+use clap::Parser;
 use humantime::format_rfc3339_seconds;
 use indicatif::ProgressBar;
 use log::info;
 use crate::game_handler::{Game};
 use crate::image_handler::{find_from_player_tokens, get_player_image_token};
 
-struct Settings {
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    // The target player id: https://www.roblox.com/users/(THE_ID_HERE)/profile
     target: u64,
+    // The target place id: https://www.roblox.com/games/(THE_ID_HERE)/
     place: u64,
-    // token: String
 }
 
 fn setup_logger() -> Result<(), fern::InitError> {
@@ -40,11 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenv::dotenv().ok();
     setup_logger().unwrap();
 
-    let settings = Settings {
-        target: env::var("TARGET").unwrap().parse().unwrap(),
-        place: env::var("PLACE").unwrap().parse().unwrap(),
-        // token: env::var("TOKEN").unwrap().parse().unwrap()
-    };
+    let settings = Cli::parse();
 
     let target_token = get_player_image_token(settings.target).await;
 
