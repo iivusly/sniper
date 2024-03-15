@@ -1,153 +1,101 @@
 
 #![allow(non_snake_case)]
 
-use reqwest::{Client, RequestBuilder, Response};
-use serde::{Serialize, Deserialize};
+mod image_handler;
+mod game_handler;
+mod request;
+
 use std::{env};
+use std::time::{Duration, SystemTime};
+use humantime::format_rfc3339_seconds;
+use indicatif::ProgressBar;
+use log::info;
+use crate::game_handler::{Game};
+use crate::image_handler::{find_from_player_tokens, get_player_image_token};
 
 struct Settings {
     target: u64,
     place: u64,
+    // token: String
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct Game {
-    id: String,
-    maxPlayers: u64,
-    playing: u64,
-    playerTokens: Vec<String>,
-    // players: IMPLEMENT,
-    fps: f32,
-    ping: u64
+fn setup_logger() -> Result<(), fern::InitError> {
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "[{} {}] {}",
+                format_rfc3339_seconds(SystemTime::now()),
+                record.target(),
+                message
+            ))
+        })
+        .level(log::LevelFilter::Info)
+        .chain(std::io::stdout())
+        .apply()?;
+    Ok(())
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-struct BatchRequest {
-    requestId: String,
-    r#type: String,
-    targetId: u64,
-    token: String,
-    format: String,
-    size: String
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct BatchResponse {
-    requestId: String,
-    errorCode: u64,
-    errorMessage: String,
-    targetId: u64,
-    state: String,
-    imageUrl: String
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Batch {
-    data: Vec<BatchResponse>
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Page {
-    previousPageCursor: Option<String>,
-    nextPageCursor: Option<String>,
-    data: Vec<Game>
-}
-
-async fn req(req_builder: RequestBuilder) -> Response {
-    req_builder
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36")
-        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9")
-        .header("Accept-Language", "en-US,en;q=0.9")
-        .header("Connection", "keep-alive")
-        .header("Upgrade-Insecure-Requests", "1")
-        .header("Cache-Control", "max-age=0")
-        .header("TE", "Trailers")
-        .header("Content-Type", "application/json")
-        .send().await.unwrap()
-}
-
-/*async fn parse<'a, T: serde::de::Deserialize<'a>>(resp: Response<Body>) -> T {
-    let vec = body::to_bytes(resp.into_body()).await.unwrap().to_vec();
-    let slice: &'a [u8] = vec.as_slice();
-
-    serde_json::from_slice::<T>(slice).unwrap()
-}*/
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenv::dotenv().ok();
+    setup_logger().unwrap();
 
     let settings = Settings {
         target: env::var("TARGET").unwrap().parse().unwrap(),
         place: env::var("PLACE").unwrap().parse().unwrap(),
+        // token: env::var("TOKEN").unwrap().parse().unwrap()
     };
 
-    let client = Client::new();
+    let target_token = get_player_image_token(settings.target).await;
 
-    let avatar_req_url = format!(
-        "https://www.roblox.com/headshot-thumbnail/image?userId={}&width=48&height=48&format=png",
-        settings.target
-    );
+    info!("Player token: {}.", target_token);
 
-    let resp = req(client.get(avatar_req_url)).await;
-    let parsed = url::Url::parse(resp.url().as_str()).unwrap();
-    let target_imageid = parsed.path().split("/").collect::<Vec<&str>>()[1];
+    info!("Getting the list of games...");
 
-    println!("ImageID: {}. Finding player...", target_imageid);
+    let spinner = ProgressBar::new_spinner();
+    spinner.enable_steady_tick(Duration::from_millis(100));
 
-    let mut next_page: String = "".to_string();
-
-    let mut found_gameid: Option<String> = None;
+    let mut games: Vec<Game> = vec![];
+    let mut cursor: String = String::new();
 
     loop {
-        let url = format!("https://games.roblox.com/v1/games/{}/servers/Public?cursor={}&sortOrder=Desc&excludeFullGames=false", settings.place, next_page);
-        let resp = req(client.get(url)).await;
-        let page = resp.json::<Page>().await?;
-
+        let page = game_handler::get_page(settings.place, cursor.clone()).await;
         for game in page.data {
-            let mut batch_req: Vec<BatchRequest> = vec![];
-            for player_token in game.playerTokens {
-                batch_req.push(BatchRequest{ requestId: format!("0:{}:AvatarHeadshot:150x150:png:regular", player_token), r#type: "AvatarHeadShot".to_string(), targetId: 0, token: player_token, format: "png".to_string(), size: "150x150".to_string() });
-            }
-
-            let data = serde_json::to_string_pretty(&batch_req).unwrap();
-
-            let request = req(client.post("https://thumbnails.roblox.com/v1/batch").body(data)).await;
-            let req = request.json::<Batch>().await.unwrap();
-
-            for data in req.data {
-                if data.state != "Completed" {
-                    println!("{:?}", data);
-                }
-
-                let parsed = url::Url::parse(data.imageUrl.as_str()).unwrap();
-                let imageid =  parsed.path().split("/").collect::<Vec<&str>>()[1];
-
-                println!("ImageID: {}", imageid);
-
-                if imageid == target_imageid {
-                    found_gameid = Some(game.id.clone());
-                    break;
-                }
-            }
-
-            if found_gameid.is_some() {
-                break;
-            }
+            games.push(game)
         }
-
-        if page.nextPageCursor.is_none() || found_gameid.is_some() {
-            break;
+        match page.nextPageCursor {
+            Some(nextPage) => cursor = nextPage,
+            None => break
         }
-
-        next_page = page.nextPageCursor.unwrap();
-        
     }
 
-    if found_gameid.is_some() {
-        println!("Game found! GameID: {}", found_gameid.unwrap());
-    } else {
-        println!("User not found :(");
+    spinner.finish();
+
+    let mut found_game: Option<Game> = None;
+
+    info!("Total of {} games found!", games.len());
+    info!("Checking all games...");
+
+    let progress_bar = ProgressBar::new(games.len() as u64);
+    for game in games {
+        progress_bar.inc(1);
+        let token = find_from_player_tokens(game.clone().playerTokens, target_token.clone()).await;
+        match token {
+            Some(_) => {
+                found_game = Some(game);
+                break;
+            },
+            None => {}
+        }
+    }
+
+    progress_bar.finish();
+
+    match found_game {
+        Some(target_game) => {
+            info!("Join code: Roblox.GameLauncher.joinGameInstance({}, '{}')", settings.place, target_game.clone().id);
+        },
+        None => info!("User not found, possibly could not fetch image!")
     }
 
     Ok(())
