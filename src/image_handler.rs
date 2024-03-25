@@ -5,23 +5,26 @@ use url::Url;
 use crate::request::{CLIENT, send_no_fail_request, send_request};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct BatchRequest {
-    requestId: String,
-    r#type: String,
-    targetId: u64,
+    request_id: String,
+    #[serde(rename = "type")]
+    type_field: String,
+    target_id: u64,
     token: String,
     format: String,
     size: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BatchResponse {
-    pub requestId: String,
-    pub errorCode: u64,
-    pub errorMessage: String,
-    pub targetId: u64,
+    pub request_id: String,
+    pub error_code: u64,
+    pub error_message: String,
+    pub target_id: u64,
     pub state: String,
-    pub imageUrl: String
+    pub image_url: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,10 +33,11 @@ struct Batch {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Thumbnail {
-    targetId: u64,
+    target_id: u64,
     state: String,
-    imageUrl: String,
+    image_url: String,
     version: String
 }
 
@@ -52,9 +56,9 @@ fn parse_token_from_url(url: String) -> String {
 pub fn find_from_player_tokens(player_tokens: Vec<String>, target_token: String) -> Pin<Box<dyn Future<Output = Option<BatchResponse>>>> {
     Box::pin(async move {
         let batch_request: Vec<BatchRequest> = player_tokens.iter().map(|token| BatchRequest {
-            requestId: format!("0:{}:AvatarHeadshot:150x150:png:regular", token),
-            r#type: "AvatarHeadShot".to_string(),
-            targetId: 0,
+            request_id: format!("0:{}:AvatarHeadshot:150x150:png:regular", token), 
+            type_field: "AvatarHeadShot".to_string(),
+            target_id: 0,
             token: token.to_string(),
             format: "png".to_string(),
             size: "150x150".to_string(),

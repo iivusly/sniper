@@ -62,7 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         for game in page.data {
             games.push(game)
         }
-        match page.nextPageCursor {
+
+        match page.next_page_cursor {
             Some(nextPage) => cursor = nextPage,
             None => break
         }
@@ -78,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let progress_bar = ProgressBar::new(games.len() as u64);
     for game in games {
         progress_bar.inc(1);
-        let token = find_from_player_tokens(game.clone().playerTokens, target_token.clone()).await;
+        let token = find_from_player_tokens(game.clone().player_tokens, target_token.clone()).await;
         match token {
             Some(_) => {
                 found_game = Some(game);

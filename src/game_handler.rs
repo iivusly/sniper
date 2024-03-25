@@ -2,28 +2,31 @@ use serde::{Deserialize, Serialize};
 use crate::request::{CLIENT, send_no_fail_request};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Player {
-    pub playerToken: String,
+    pub player_token: String,
     pub id: u64,
     pub name: String,
-    pub displayName: String
+    pub display_name: String
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Game {
     pub id: String,
-    pub maxPlayers: u64,
+    pub max_players: u64,
     pub playing: u64,
-    pub playerTokens: Vec<String>,
+    pub player_tokens: Vec<String>,
     pub players: Vec<Player>,
     pub fps: f32,
     pub ping: Option<u64>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Page {
-    pub previousPageCursor: Option<String>,
-    pub nextPageCursor: Option<String>,
+    pub previous_page_cursor: Option<String>,
+    pub next_page_cursor: Option<String>,
     pub data: Vec<Game>
 }
 
