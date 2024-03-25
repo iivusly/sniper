@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let page = game_handler::get_page(settings.place, &cursor).await?;
 
         for game in page.data {
-            games.push(game)
+            games.push(game);
         }
 
         match page.next_page_cursor {
