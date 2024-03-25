@@ -4,7 +4,7 @@ use std::pin::Pin;
 use std::time::Duration;
 use lazy_static::lazy_static;
 use reqwest::header::{HeaderMap, HeaderValue};
-use reqwest::{Client, RequestBuilder, Response};
+use reqwest::{Client, RequestBuilder, Response, Error};
 use tokio::time::sleep;
 
 lazy_static! {
