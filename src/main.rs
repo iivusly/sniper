@@ -68,13 +68,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Some(nextPage) => cursor = nextPage,
             None => break
         }
+
+        spinner.set_message(format!("Games found: {}", games.len()));
     }
 
-    spinner.finish();
+    spinner.finish_with_message(format!("Total of {} games found!", games.len()));
 
     let mut found_game: Option<Game> = None;
 
-    info!("Total of {} games found!", games.len());
     info!("Checking all games...");
 
     let progress_bar = ProgressBar::new(games.len() as u64);
