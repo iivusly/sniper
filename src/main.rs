@@ -45,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let settings = Cli::parse();
 
-    let target_token = get_player_image_token(settings.target).await;
+    let target_token = get_player_image_token(settings.target).await?;
 
     info!("Player token: {}.", target_token);
 

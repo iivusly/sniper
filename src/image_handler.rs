@@ -53,29 +53,28 @@ fn parse_token_from_url(url: String) -> String {
     token
 }
 
-pub fn find_from_player_tokens(player_tokens: Vec<String>, target_token: String) -> Pin<Box<dyn Future<Output = Option<BatchResponse>>>> {
+pub async fn get_player_image_tokens(player_tokens: &Vec<String>) -> Result<Batch, reqwest::Error> {
+    let batch_request = player_tokens.iter().map(|token| BatchRequest {
+        request_id: format!("0:{}:AvatarHeadshot:150x150:png:regular", token),
+        type_field: "AvatarHeadShot".to_string(),
+        target_id: 0,
+        token: token.to_string(),
+        format: "png".to_string(),
+        size: "150x150".to_string(),
+    }).collect::<Vec<BatchRequest>>();
+
+    let request = send_request(
+        CLIENT.post("https://thumbnails.roblox.com/v1/batch").json(&batch_request)
+    ).await?;
+
+    Ok(request.json::<Batch>().await?)
+}
+
 pub fn find_from_player_tokens<'a>(player_tokens: &'a Vec<String>, target_token: &'a String, retry_level: usize) -> Pin<Box<dyn Future<Output = Option<BatchResponse>> + 'a>> {
     Box::pin(async move {
-        let batch_request: Vec<BatchRequest> = player_tokens.iter().map(|token| BatchRequest {
-            request_id: format!("0:{}:AvatarHeadshot:150x150:png:regular", token), 
-            type_field: "AvatarHeadShot".to_string(),
-            target_id: 0,
-            token: token.to_string(),
-            format: "png".to_string(),
-            size: "150x150".to_string(),
-        }).collect();
+        let batch = get_player_image_tokens(player_tokens).await.unwrap();
 
-        let request = send_no_fail_request(
-            CLIENT.post("https://thumbnails.roblox.com/v1/batch").json(&batch_request)
-        ).await;
-
-        if request.status() == 429 {
-
-        }
-
-        let batch = request.json::<Batch>().await.unwrap();
-
-        let mut bad_tokens: Vec<String> = vec![];
+        let mut pending_tokens: Vec<String> = vec![];
 
         for response in batch.data {
             match response.state.as_str() {
@@ -100,15 +99,15 @@ pub fn find_from_player_tokens<'a>(player_tokens: &'a Vec<String>, target_token:
 }
 
 
-pub async fn get_player_image_token(user_id: u64) -> String {
+pub async fn get_player_image_token(user_id: u64) -> Result<String, reqwest::Error> {
     let url = format!(
         "https://thumbnails.roblox.com/v1/users/avatar-bust?userIds={}&size=48x48&format=Png&isCircular=false",
         user_id
     );
 
-    let response = send_request(CLIENT.get(url)).await;
+    let response = send_request(CLIENT.get(url)).await?;
     let thumbnails = response.json::<ThumbnailBatch>().await.unwrap();
     let token = parse_token_from_url((&thumbnails.data[0].image_url).to_string());
 
-    token
+    Ok(token)
 }
