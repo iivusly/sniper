@@ -28,8 +28,8 @@ pub struct BatchResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Batch {
-    data: Vec<BatchResponse>
+pub struct Batch {
+    pub data: Vec<BatchResponse>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
