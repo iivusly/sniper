@@ -29,17 +29,30 @@ lazy_static! {
     pub static ref CLIENT: Client = Client::new();
 }
 
-pub async fn send_request(request_builder: RequestBuilder) -> Response {
-    request_builder.headers((&*HEADERS).clone()).send().await.unwrap()
+pub(crate) async fn send_request(request_builder: RequestBuilder) -> Result<Response, Error> {
+    request_builder.headers((&*HEADERS).clone() as HeaderMap).send().await
 }
 
-pub fn send_no_fail_request(request_builder: RequestBuilder) -> Pin<Box<dyn Future<Output=Response>>> {
+#[allow(dead_code)]
+pub(crate) fn send_no_fail_request(request_builder: RequestBuilder) -> Pin<Box<dyn Future<Output=Response>>> {
     Box::pin(async move {
-        let response = send_request(request_builder.try_clone().unwrap()).await;
-        if response.status() != 200 {
+        let response_result = send_request(request_builder.try_clone().unwrap()).await;
+        async fn failed(request_builder: RequestBuilder) -> Response {
             sleep(Duration::from_millis(100)).await;
             return send_no_fail_request(request_builder).await;
         }
-        response
+
+        match response_result {
+            Ok(response) => {
+                if response.status() != 200 {
+                    return failed(request_builder).await;
+                }
+
+                response
+            },
+            Err(_) => {
+                return failed(request_builder).await;
+            }
+        }
     })
 }
