@@ -54,6 +54,7 @@ fn parse_token_from_url(url: String) -> String {
 }
 
 pub fn find_from_player_tokens(player_tokens: Vec<String>, target_token: String) -> Pin<Box<dyn Future<Output = Option<BatchResponse>>>> {
+pub fn find_from_player_tokens<'a>(player_tokens: &'a Vec<String>, target_token: &'a String, retry_level: usize) -> Pin<Box<dyn Future<Output = Option<BatchResponse>> + 'a>> {
     Box::pin(async move {
         let batch_request: Vec<BatchRequest> = player_tokens.iter().map(|token| BatchRequest {
             request_id: format!("0:{}:AvatarHeadshot:150x150:png:regular", token), 
@@ -77,20 +78,21 @@ pub fn find_from_player_tokens(player_tokens: Vec<String>, target_token: String)
         let mut bad_tokens: Vec<String> = vec![];
 
         for response in batch.data {
-            if response.state != "Completed" {
-                bad_tokens.push(response.requestId.split(":").collect::<Vec<&str>>()[1].to_string());
-                continue;
-            }
-
-            let token = parse_token_from_url(response.imageUrl.clone());
-            if token == target_token {
-                return Some(response);
+            match response.state.as_str() {
+                "Completed" => {
+                    let token = parse_token_from_url(response.image_url.clone());
+                    if token == target_token.clone() {
+                        return Some(response);
+                    }
+                },
+                "Pending" => pending_tokens.push(response.request_id.split(":").collect::<Vec<&str>>()[1].to_string()),
+                _ => continue
             }
         }
 
-        if !bad_tokens.is_empty() {
+        if !pending_tokens.is_empty() && retry_level < 3 { // TODO: make retry less
             // sleep(Duration::from_secs(10)).await;
-            // return find_from_player_tokens(bad_tokens, target_token).await;
+            return find_from_player_tokens(&pending_tokens, target_token, retry_level + 1).await;
         }
 
         None

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::request::{CLIENT, send_no_fail_request};
+use crate::request::{CLIENT, send_request};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -30,9 +30,9 @@ pub struct Page {
     pub data: Vec<Game>
 }
 
-pub async fn get_page(game_id: u64, cursor: String) -> Page {
+pub async fn get_page(game_id: u64, cursor: &String) -> Result<Page, reqwest::Error> {
     let url = format!("https://games.roblox.com/v1/games/{}/servers/Public?cursor={}&sortOrder=Desc&excludeFullGames=false&limit=100", game_id, cursor);
-    let response = send_no_fail_request(CLIENT.get(url)).await;
-    let page = response.json::<Page>().await.unwrap();
-    page
+    let response = send_request(CLIENT.get(url)).await?;
+    let page = response.json::<Page>().await?;
+    Ok(page)
 }

@@ -58,7 +58,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut cursor: String = String::new();
 
     loop {
-        let page = game_handler::get_page(settings.place, cursor.clone()).await;
+        let page = game_handler::get_page(settings.place, &cursor).await?;
+
         for game in page.data {
             games.push(game)
         }
@@ -79,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let progress_bar = ProgressBar::new(games.len() as u64);
     for game in games {
         progress_bar.inc(1);
-        let token = find_from_player_tokens(game.clone().player_tokens, target_token.clone()).await;
+        let token = find_from_player_tokens(&game.player_tokens, &target_token, 0).await;
         match token {
             Some(_) => {
                 found_game = Some(game);
