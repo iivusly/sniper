@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 use serde::{Deserialize, Serialize};
 use url::Url;
-use crate::request::{CLIENT, send_no_fail_request, send_request};
+use crate::request::{CLIENT, send_request};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
