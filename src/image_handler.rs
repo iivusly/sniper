@@ -106,7 +106,7 @@ pub async fn get_player_image_token(user_id: u64) -> String {
 
     let response = send_request(CLIENT.get(url)).await;
     let thumbnails = response.json::<ThumbnailBatch>().await.unwrap();
-    let token = parse_token_from_url((&thumbnails.data[0].imageUrl).to_string());
+    let token = parse_token_from_url((&thumbnails.data[0].image_url).to_string());
 
     token
 }
