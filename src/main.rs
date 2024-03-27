@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         }
 
         match page.next_page_cursor {
-            Some(nextPage) => cursor = nextPage,
+            Some(next_page) => cursor = next_page,
             None => break
         }
 
