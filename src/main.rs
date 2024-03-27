@@ -1,6 +1,3 @@
-
-#![allow(non_snake_case)]
-
 mod image_handler;
 mod game_handler;
 mod request;
