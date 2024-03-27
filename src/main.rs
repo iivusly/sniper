@@ -2,9 +2,8 @@ mod image_handler;
 mod game_handler;
 mod request;
 
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 use clap::Parser;
-use humantime::format_rfc3339_seconds;
 use indicatif::ProgressBar;
 use log::info;
 use crate::game_handler::{Game};
@@ -19,26 +18,9 @@ struct Cli {
     place: u64,
 }
 
-fn setup_logger() -> Result<(), fern::InitError> {
-    fern::Dispatch::new()
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "[{} {}] {}",
-                format_rfc3339_seconds(SystemTime::now()),
-                record.target(),
-                message
-            ))
-        })
-        .level(log::LevelFilter::Info)
-        .chain(std::io::stdout())
-        .apply()?;
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    dotenv::dotenv().ok();
-    setup_logger().unwrap();
+    env_logger::try_init().unwrap();
 
     let settings = Cli::parse();
 
