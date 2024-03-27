@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use std::time::Duration;
 use lazy_static::lazy_static;
 use reqwest::header::{HeaderMap, HeaderValue};
 use reqwest::{Client, RequestBuilder, Response, Error};
+use tokio::time::sleep;
 
 lazy_static! {
     static ref HEADERS: HeaderMap = {
@@ -36,7 +38,7 @@ pub(crate) fn send_no_fail_request(request_builder: RequestBuilder) -> Pin<Box<d
     Box::pin(async move {
         let response_result = send_request(request_builder.try_clone().unwrap()).await;
         async fn failed(request_builder: RequestBuilder) -> Response {
-            // thread::sleep(Duration::from_millis(100)); // TODO: find a way to do this without tokio with std
+            sleep(Duration::from_millis(100)).await;
             return send_no_fail_request(request_builder).await;
         }
 
