@@ -12,7 +12,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "sniper"
 path = "src/main.rs"
-required-features = ["clap", "tokio"]
+required-features = ["clap"]
 
 [dependencies]
 dotenv = "0.15.0"
