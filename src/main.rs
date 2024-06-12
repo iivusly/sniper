@@ -20,6 +20,7 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ::std::env::set_var("RUST_LOG", "info");
     env_logger::try_init().unwrap();
 
     let settings = Cli::parse();
